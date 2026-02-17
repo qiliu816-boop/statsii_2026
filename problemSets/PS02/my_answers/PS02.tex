@@ -1,0 +1,257 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{graphicx,textcomp}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{fullpage}
+\usepackage{color}
+\usepackage[reqno]{amsmath}
+\usepackage{amsthm}
+\usepackage{fancyvrb}
+\usepackage{amssymb,enumerate}
+\usepackage[all]{xy}
+\usepackage{endnotes}
+\usepackage{adjustbox}
+\usepackage{lscape}
+\newtheorem{com}{Comment}
+\usepackage{float}
+\usepackage{hyperref}
+\newtheorem{lem} {Lemma}
+\newtheorem{prop}{Proposition}
+\newtheorem{thm}{Theorem}
+\newtheorem{defn}{Definition}
+\newtheorem{cor}{Corollary}
+\usepackage{enumitem}
+
+\newtheorem{obs}{Observation}
+\usepackage[compact]{titlesec}
+\usepackage{dcolumn}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usepackage{multirow}
+\usepackage{xcolor}
+\newcolumntype{.}{D{.}{.}{-1}}
+\newcolumntype{d}[1]{D{.}{.}{#1}}
+\definecolor{light-gray}{gray}{0.65}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{color}
+
+% ----------------------------
+% Listings style (match Jeff style)
+% ----------------------------
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\footnotesize,
+	breakatwhitespace=false,
+	breaklines=true,
+	captionpos=b,
+	keepspaces=true,
+	numbers=left,
+	numbersep=5pt,
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	tabsize=2
+}
+\lstset{style=mystyle}
+
+% ----------------------------
+% Title (keep instructor format)
+% ----------------------------
+\title{Applied Stats II Problem Set 2}
+\date{17/02/2026}
+\author{Qi Liu}
+
+\begin{document}
+	\maketitle
+	
+
+	% =========================================================
+	% (Optional) Setup block once (minimal)
+	% =========================================================
+	\section*{Setup (key data preparation steps)}
+	\noindent The dataset is loaded from \texttt{climateSupport.RData}. I recode the response to a binary indicator and set factor baselines to match the assignment design (\texttt{countries = 20 of 192}, \texttt{sanctions = None}). The full script uses a robust path search to run on any computer; here I show the essential transformations.
+	
+	\begin{lstlisting}[language=R]
+		# key preparation steps (see PS02.R for robust path loading)
+		# load("climateSupport.RData")  # full script loads safely from file path
+		
+		# recode response: Supported -> 1, Not supported -> 0
+		choice_chr <- tolower(trimws(as.character(climateSupport$choice)))
+		climateSupport$choice01 <- dplyr::case_when(
+		choice_chr == "supported" ~ 1L,
+		choice_chr == "not supported" ~ 0L,
+		TRUE ~ NA_integer_
+		)
+		
+		# ensure factors + set reference categories
+		climateSupport$countries <- factor(as.character(climateSupport$countries), ordered = FALSE)
+		climateSupport$sanctions <- factor(as.character(climateSupport$sanctions), ordered = FALSE)
+		climateSupport$countries <- relevel(climateSupport$countries, ref = "20 of 192")
+		climateSupport$sanctions <- relevel(climateSupport$sanctions, ref = "None")
+	\end{lstlisting}
+	
+	\vspace{.35cm}
+	
+	% =========================================================
+	% Question 1
+	% =========================================================
+	\section*{Question 1}
+	\vspace{.25cm}
+	
+	\noindent \emph{Fit an additive model. Provide the summary output, the global null hypothesis, and the p-value. Please describe the results and provide a conclusion.}
+	
+	\vspace{.25cm}
+	\noindent \textbf{Model.} I estimate an additive logistic regression model with reference categories \texttt{countries = 20 of 192} and \texttt{sanctions = None}:
+	\[
+	\text{logit}\{P(\texttt{choice}=1)\}
+	= \beta_0
+	+ \beta_{80}\mathbb{I}(\texttt{countries}=80/192)
+	+ \beta_{160}\mathbb{I}(\texttt{countries}=160/192)
+	+ \gamma_{5}\mathbb{I}(\texttt{sanctions}=5\%)
+	+ \gamma_{15}\mathbb{I}(\texttt{sanctions}=15\%)
+	+ \gamma_{20}\mathbb{I}(\texttt{sanctions}=20\%).
+	\]
+	
+	\vspace{.15cm}
+	\noindent \textbf{Global null hypothesis.}
+	\[
+	H_0:\beta_{80}=\beta_{160}=\gamma_{5}=\gamma_{15}=\gamma_{20}=0.
+	\]
+	\noindent I test this using a likelihood ratio test comparing the intercept-only model to the additive model.
+	
+	\vspace{.25cm}
+	\noindent \textbf{R code (key steps).}
+	\begin{lstlisting}[language=R]
+		# Q1: additive model + global LR test
+		m_null <- glm(choice01 ~ 1, data = climateSupport, family = binomial(link = "logit"))
+		m_add  <- glm(choice01 ~ countries + sanctions, data = climateSupport, family = binomial(link = "logit"))
+		
+		summary(m_add)
+		anova(m_null, m_add, test = "Chisq")
+	\end{lstlisting}
+	
+	\vspace{.25cm}
+	\noindent \textbf{Summary output.}
+	\begin{lstlisting}
+		Coefficients:
+		Estimate Std. Error z value Pr(>|z|)    
+		(Intercept)         -0.27266    0.05360  -5.087 3.64e-07 ***
+		countries160 of 192  0.64835    0.05388  12.033  < 2e-16 ***
+		countries80 of 192   0.33636    0.05380   6.252 4.05e-10 ***
+		sanctions15%        -0.13325    0.06208  -2.146  0.03183 *  
+		sanctions20%        -0.30356    0.06209  -4.889 1.01e-06 ***
+		sanctions5%          0.19186    0.06216   3.086  0.00203 ** 
+		
+		Null deviance: 11783  on 8499  degrees of freedom
+		Residual deviance: 11568  on 8494  degrees of freedom
+		AIC: 11580
+	\end{lstlisting}
+	
+	\vspace{.25cm}
+	\noindent \textbf{Global LR test output.}
+	\begin{lstlisting}
+		Analysis of Deviance Table
+		
+		Model 1: choice01 ~ 1
+		Model 2: choice01 ~ countries + sanctions
+		Resid. Df Resid. Dev Df Deviance  Pr(>Chi)    
+		1      8499      11783                          
+		2      8494      11568  5   215.15 < 2.2e-16 ***
+	\end{lstlisting}
+	
+	\vspace{.25cm}
+	\noindent \textbf{Interpretation and conclusion.}
+	The number of participating countries is strongly and positively associated with support. Relative to 20/192, both 80/192 ($\hat{\beta}_{80}=0.336$, $p<0.001$) and 160/192 ($\hat{\beta}_{160}=0.648$, $p<0.001$) increase the log-odds of support. Sanctions also matter: compared to no sanctions, 5\% sanctions increase support ($\hat{\gamma}_{5}=0.192$, $p=0.002$), while 15\% and 20\% sanctions decrease support ($\hat{\gamma}_{15}=-0.133$, $p=0.032$; $\hat{\gamma}_{20}=-0.304$, $p<0.001$). The global LR test yields $\chi^2(5)=215.15$ with $p<2.2\times 10^{-16}$, so I reject $H_0$ and conclude the explanatory variables significantly improve model fit.
+	
+	%
+	
+	% =========================================================
+	% Question 2
+	% =========================================================
+	\section*{Question 2}
+	\noindent \emph{(a) For nearly all countries participating (160/192), how does increasing sanctions from 5\% to 15\% change the odds of support?
+		(b) For few countries participating (20/192), how does increasing sanctions from 5\% to 15\% change the odds of support?
+		(c) What is the estimated probability of support if there are 80/192 participating with no sanctions?}
+	
+	\vspace{.25cm}
+	\noindent \textbf{Key idea.} In an additive model (no interaction), the effect of sanctions does not depend on the level of \texttt{countries}. Therefore, the 15\% vs 5\% odds ratio is the same for parts (a) and (b).
+	
+	\vspace{.25cm}
+	\noindent \textbf{R code (key steps).}
+	\begin{lstlisting}[language=R]
+		# Q2a/Q2b: OR(15% vs 5%) = exp(beta_15 - beta_5)
+		b <- coef(m_add)
+		OR_15_vs_5 <- exp(b["sanctions15%"] - b["sanctions5%"])
+		OR_15_vs_5
+		
+		# Q2c: predicted probability at countries=80/192, sanctions=None
+		newdat <- data.frame(
+		countries = factor("80 of 192", levels = levels(climateSupport$countries)),
+		sanctions = factor("None", levels = levels(climateSupport$sanctions))
+		)
+		p_hat <- predict(m_add, newdata = newdat, type = "response")
+		p_hat
+	\end{lstlisting}
+	
+	\vspace{.25cm}
+	\noindent \textbf{(a) and (b) Odds ratio output.}
+	\[
+	OR(15\%\text{ vs }5\%)=\exp(\gamma_{15}-\gamma_{5}) = 0.7225.
+	\]
+	\begin{lstlisting}
+		OR(15% vs 5%) = 0.7224531
+	\end{lstlisting}
+	Thus, holding everything else constant, increasing sanctions from 5\% to 15\% multiplies the odds of supporting the policy by 0.7225, i.e., the odds decrease by about $1-0.7225=0.2775$ (27.8\%). Because the model is additive, the same odds ratio applies when \texttt{countries = 20 of 192}.
+	
+	\vspace{.25cm}
+	\noindent \textbf{(c) Predicted probability output.}
+	\begin{lstlisting}
+		Predicted probability = 0.5159191
+	\end{lstlisting}
+	Therefore, the estimated probability of support under \texttt{countries = 80 of 192} and \texttt{sanctions = None} is approximately 0.516.
+	
+	% =========================================================
+	% Question 3
+	% =========================================================
+	\section*{Question 3}
+	\noindent \emph{Would the answers to 2(a) and 2(b) potentially change if we included an interaction term in this model? Why? Perform a test to see if including an interaction is appropriate.}
+	
+	\vspace{.25cm}
+	\noindent \textbf{Explanation.} Yes, potentially. If we include an interaction term \texttt{countries} $\times$ \texttt{sanctions}, the effect of sanctions is allowed to vary across different levels of participating countries. In that case, the odds ratio for moving from 5\% to 15\% sanctions could differ when \texttt{countries = 160/192} versus \texttt{countries = 20/192}.
+	
+	\vspace{.25cm}
+	\noindent \textbf{R code (key steps).}
+	\begin{lstlisting}[language=R]
+		# Q3: interaction model + LR test
+		m_int <- glm(choice01 ~ countries * sanctions, data = climateSupport,
+		family = binomial(link = "logit"))
+		anova(m_add, m_int, test = "Chisq")
+	\end{lstlisting}
+	
+	\vspace{.25cm}
+	\noindent \textbf{LR test output (additive vs interaction).}
+	\begin{lstlisting}
+		Analysis of Deviance Table
+		
+		Model 1: choice01 ~ countries + sanctions
+		Model 2: choice01 ~ countries * sanctions
+		Resid. Df Resid. Dev Df Deviance Pr(>Chi)
+		1      8494      11568                     
+		2      8488      11562  6   6.2928   0.3912
+	\end{lstlisting}
+	
+	\noindent Since $p=0.3912>0.05$, we fail to reject the null hypothesis that the interaction terms are jointly zero. There is no strong evidence that the effect of sanctions differs by the number of participating countries, so the additive model is adequate.
+	
+
+	
+\end{document}
