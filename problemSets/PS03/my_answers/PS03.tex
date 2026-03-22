@@ -1,0 +1,258 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{graphicx,textcomp}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{fullpage}
+\usepackage{color}
+\usepackage[reqno]{amsmath}
+\usepackage{amsthm}
+\usepackage{fancyvrb}
+\usepackage{amssymb,enumerate}
+\usepackage[all]{xy}
+\usepackage{endnotes}
+\usepackage{adjustbox}
+\usepackage{lscape}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage[compact]{titlesec}
+\usepackage{dcolumn}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{array}
+
+\newtheorem{com}{Comment}
+\newtheorem{lem}{Lemma}
+\newtheorem{prop}{Proposition}
+\newtheorem{thm}{Theorem}
+\newtheorem{defn}{Definition}
+\newtheorem{cor}{Corollary}
+\newtheorem{obs}{Observation}
+
+\newcolumntype{.}{D{.}{.}{-1}}
+\newcolumntype{d}[1]{D{.}{.}{#1}}
+\definecolor{light-gray}{gray}{0.65}
+
+% Listings style
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize\ttfamily,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    columns=fullflexible,
+    frame=single
+}
+\lstset{style=mystyle}
+
+\title{Applied Stats II Problem Set 3}
+\date{22/03/2026}
+\author{Qi Liu}
+
+\begin{document}
+\maketitle
+
+\section*{Setup }
+The two datasets, \texttt{gdpChange.csv} and \texttt{MexicoMuniData.csv}, are read from the working directory using a robust path function. For Question 1, the original numeric variable \texttt{GDPWdiff} is recoded into a three-category outcome to match the assignment prompt: \texttt{negative} if \texttt{GDPWdiff < 0}, \texttt{no change} if \texttt{GDPWdiff = 0}, and \texttt{positive} if \texttt{GDPWdiff > 0}. For Question 2, I keep only the variables required for the Poisson regression and drop missing observations. 
+
+\begin{lstlisting}[language=R]
+# key preparation steps for Question 1
+gdp <- read.csv(gdp_file)
+gdp$GDPWdiff_cat <- ifelse(
+  gdp$GDPWdiff < 0, "negative",
+  ifelse(gdp$GDPWdiff == 0, "no change", "positive")
+)
+
+gdp_q1 <- gdp %>%
+  dplyr::select(GDPWdiff_cat, REG, OIL) %>%
+  na.omit()
+
+# keep needed variables for Question 2
+mex_q2 <- mex %>%
+  dplyr::select(PAN.visits.06, competitive.district,
+                marginality.06, PAN.governor.06) %>%
+  na.omit()
+\end{lstlisting}
+
+\section*{Question 1}
+\noindent\emph{Construct and interpret an unordered multinomial logit with \texttt{GDPWdiff} as the outcome and ``no change'' as the reference category. Then construct and interpret an ordered multinomial logit with the same outcome.}
+
+\subsection*{1. Recoding the outcome variable}
+In the raw dataset, \texttt{GDPWdiff} is stored as a numeric year-to-year difference in GDP. To match the assignment prompt, I recoded it into three categories: \texttt{negative} (\texttt{GDPWdiff < 0}), \texttt{no change} (\texttt{GDPWdiff = 0}), and \texttt{positive} (\texttt{GDPWdiff > 0}). This produced 1,105 observations in the negative category, 16 in the no-change category, and 2,600 in the positive category, for a total of 3,721 observations after removing missing values.
+
+\subsection*{2. Unordered multinomial logit}
+I first estimated an unordered multinomial logit model with \texttt{GDPWdiff\_cat} as the outcome and \texttt{no change} as the reference category. The explanatory variables are \texttt{REG} (1 = democracy, 0 = non-democracy) and \texttt{OIL} (1 = oil exporter, 0 = otherwise).
+
+\begin{lstlisting}[language=R]
+# unordered multinomial logit
+m_multinom <- nnet::multinom(GDPWdiff_cat ~ REG + OIL,
+                             data = gdp_q1, trace = FALSE)
+summary(m_multinom)
+\end{lstlisting}
+
+\noindent\textbf{Coefficient table.}
+
+\begin{center}
+\begin{tabular}{llrrrr}
+\toprule
+Comparison & Term & Estimate & Std. Error & z value & p-value \\
+\midrule
+positive & (Intercept) & 4.5338 & 0.2692 & 16.8416 & 0.0000 \\
+positive & REG         & 1.7690 & 0.7670 &  2.3063 & 0.0211 \\
+positive & OIL         & 4.5763 & 6.8851 &  0.6647 & 0.5063 \\
+negative & (Intercept) & 3.8054 & 0.2707 & 14.0584 & 0.0000 \\
+negative & REG         & 1.3793 & 0.7687 &  1.7943 & 0.0728 \\
+negative & OIL         & 4.7840 & 6.8854 &  0.6948 & 0.4872 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Predicted probabilities.}
+
+\begin{center}
+\begin{tabular}{ccrrr}
+\toprule
+REG & OIL & no change & positive & negative \\
+\midrule
+0 & 0 & 0.007192 & 0.669601 & 0.323207 \\
+1 & 0 & 0.001378 & 0.752600 & 0.246022 \\
+0 & 1 & 0.000069 & 0.627278 & 0.372653 \\
+1 & 1 & 0.000013 & 0.713086 & 0.286900 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Interpretation.} In the comparison between \texttt{positive} and \texttt{no change}, the coefficient on \texttt{REG} is positive and statistically significant ($b = 1.769$, $p = 0.021$). This suggests that democracies are more likely than non-democracies to experience positive GDP change rather than no change, holding \texttt{OIL} constant. In the comparison between \texttt{negative} and \texttt{no change}, the coefficient on \texttt{REG} is also positive ($b = 1.379$), but it is only marginally significant at the 10\% level ($p = 0.073$). The estimated coefficients on \texttt{OIL} are not statistically significant in either comparison, and the very large standard errors indicate considerable imprecision. Because the \texttt{no change} group contains only 16 observations, all comparisons relative to that reference category should be interpreted with caution.
+
+The predicted probabilities reinforce this pattern. When \texttt{REG = 1} and \texttt{OIL = 0}, the predicted probability of positive GDP change is about 0.753, compared with 0.670 when \texttt{REG = 0} and \texttt{OIL = 0}. Across all scenarios, the probability of \texttt{no change} is extremely small, so the substantive contrast is mainly between \texttt{positive} and \texttt{negative} outcomes.
+
+\subsection*{3. Ordered multinomial logit}
+Because the three outcome categories have a natural order, \texttt{negative < no change < positive}, I next estimated an ordered logit model.
+
+\begin{lstlisting}[language=R]
+# ordered logit
+m_ordered <- MASS::polr(GDPWdiff_ord ~ REG + OIL,
+                        data = gdp_q1, Hess = TRUE)
+summary(m_ordered)
+\end{lstlisting}
+
+\noindent\textbf{Coefficient and cutoff table.}
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Term & Value & Std. Error & t value & p-value \\
+\midrule
+REG                 &  0.3985 & 0.0752 &   5.3001 & 0.0000 \\
+OIL                 & -0.1987 & 0.1157 &  -1.7173 & 0.0859 \\
+negative$|$no change & -0.7312 & 0.0476 & -15.3597 & 0.0000 \\
+no change$|$positive & -0.7105 & 0.0475 & -14.9554 & 0.0000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Predicted probabilities.}
+
+\begin{center}
+\begin{tabular}{ccrrr}
+\toprule
+REG & OIL & negative & no change & positive \\
+\midrule
+0 & 0 & 0.324936 & 0.004555 & 0.670508 \\
+1 & 0 & 0.244224 & 0.003840 & 0.751937 \\
+0 & 1 & 0.369943 & 0.004836 & 0.625221 \\
+1 & 1 & 0.282733 & 0.004215 & 0.713052 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{Interpretation.} In the ordered logit model, the coefficient on \texttt{REG} is positive and highly statistically significant ($b = 0.398$, $p < 0.001$). This indicates that democracies are more likely to fall into a higher GDP change category than non-democracies, holding \texttt{OIL} constant. The coefficient on \texttt{OIL} is negative ($b = -0.199$) and only marginally significant ($p = 0.086$), so the evidence for a negative oil effect is weak. The two cutoff points represent the thresholds on the latent continuous scale separating \texttt{negative}, \texttt{no change}, and \texttt{positive}. They are necessary for classification in the ordered logit model but are not interpreted like the slope coefficients.
+
+The predicted probabilities from the ordered logit model are very similar to those from the unordered multinomial model. In both models, democracy increases the predicted probability of \texttt{positive} GDP change and decreases the predicted probability of \texttt{negative} GDP change.
+
+\noindent\textbf{Conclusion for Question 1.} Across both models, the results point in the same general direction: democracy is associated with more positive GDP change outcomes. The ordered logit model is especially appealing here because the categories are naturally ordered. By contrast, there is only weak and inconsistent evidence that oil-export dependence affects GDP change categories.
+
+\section*{Question 2}
+\noindent\emph{Run a Poisson regression because the outcome is a count variable. Is there evidence that PAN presidential candidates visit swing districts more? Interpret the \texttt{marginality.06} and \texttt{PAN.governor.06} coefficients, and provide the estimated mean number of visits for a specified hypothetical district.}
+
+The dependent variable, \texttt{PAN.visits.06}, is the number of times the winning PAN presidential candidate in 2006 visited a district. Since this is a count variable, I estimate a Poisson regression with \texttt{competitive.district}, \texttt{marginality.06}, and \texttt{PAN.governor.06} as predictors.
+
+\begin{lstlisting}[language=R]
+# Poisson regression
+m_pois <- glm(PAN.visits.06 ~ competitive.district +
+                marginality.06 + PAN.governor.06,
+              family = poisson(link = "log"),
+              data = mex_q2)
+summary(m_pois)
+\end{lstlisting}
+
+\noindent\textbf{Coefficient table.}
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+Term & Estimate & Std. Error & z value & p-value \\
+\midrule
+(Intercept)           & -3.8102 & 0.2221 & -17.1559 & 0.0000 \\
+competitive.district  & -0.0814 & 0.1707 &  -0.4766 & 0.6336 \\
+marginality.06        & -2.0801 & 0.1173 & -17.7277 & 0.0000 \\
+PAN.governor.06       & -0.3116 & 0.1667 &  -1.8688 & 0.0617 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{(a) Is there evidence that PAN candidates visit swing districts more?}
+The coefficient on \texttt{competitive.district} is negative and statistically insignificant ($b = -0.081$, $z = -0.477$, $p = 0.634$). Therefore, there is no evidence that PAN presidential candidates visited competitive districts more often. The point estimate is slightly negative, but the effect is small and not statistically distinguishable from zero.
+
+\subsection*{(b) Interpretation of \texttt{marginality.06} and \texttt{PAN.governor.06}}
+For \texttt{marginality.06}, the coefficient is $-2.080$ and highly statistically significant. In a Poisson model, it is natural to interpret this through the incidence rate ratio:
+\[
+\exp(-2.080) = 0.1249.
+\]
+Holding other variables constant, a one-unit increase in \texttt{marginality.06} multiplies the expected number of visits by about 0.125, which corresponds to a reduction of roughly 87.5\% in the expected number of visits.
+
+For \texttt{PAN.governor.06}, the coefficient is $-0.312$ with a p-value of 0.062, which is only marginally significant. Its incidence rate ratio is:
+\[
+\exp(-0.312) = 0.7323.
+\]
+This means that, holding other variables constant, districts in states with a PAN governor are expected to receive about 0.732 times as many visits as districts in states without a PAN governor. Equivalently, the expected number of visits is about 26.8\% lower, although this result is suggestive rather than conclusive.
+
+\subsection*{(c) Estimated mean number of visits}
+For a hypothetical district with \texttt{competitive.district = 1}, \texttt{marginality.06 = 0}, and \texttt{PAN.governor.06 = 1}, the model predicts an expected mean number of visits of:
+\[
+\hat{E}(Y \mid X) = 0.01495.
+\]
+Thus, the estimated mean number of visits is approximately 0.015. This is consistent with the overall distribution of the outcome in the sample, since most districts receive zero visits and the sample mean is already very low.
+
+\subsection*{Additional note on model fit}
+As an additional diagnostic, I calculated a Pearson dispersion statistic of 3.518. This suggests some overdispersion in the count data, meaning that the variance exceeds the mean. Since the assignment specifically asks for a Poisson regression, I retain that specification here, but the results should be interpreted with some caution.
+
+\subsection*{Conclusion for Question 2.} 
+The Poisson regression provides no evidence that PAN candidates visited competitive districts more often. By contrast, \texttt{marginality.06} has a strong and statistically significant negative association with the expected number of visits, while \texttt{PAN.governor.06} is also negative but only marginally significant. For the hypothetical district described in the question, the predicted mean number of visits is approximately 0.015.
+
+
+\end{document}
