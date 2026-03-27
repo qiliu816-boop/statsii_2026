@@ -1,0 +1,22 @@
+
+% Table created by stargazer v.5.2.3 by Marek Hlavac, Social Policy Institute. E-mail: marek.hlavac at gmail.com
+% Date and time: 周五, 3月 27, 2026 - 14:03:27
+\begin{table}[!htbp] \centering 
+  \caption{Estimated Treatment Effects on Attitude Differences} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} ccccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & outcome & term & estimate & std.error & conf.low & conf.high & p.value & n \\ 
+\hline \\[-1.8ex] 
+1 & Ticketmaster monopoly & treat1 & $0.105$ & $0.031$ & $0.044$ & $0.165$ & $0.004$ & $4,011$ \\ 
+4 & Ticketmaster monopoly & treat4 & $0.517$ & $0.154$ & $0.215$ & $0.819$ & $0.004$ & $4,011$ \\ 
+11 & Ticketmaster inequality & treat1 & $0.292$ & $0.033$ & $0.227$ & $0.356$ & $0$ & $4,011$ \\ 
+41 & Ticketmaster inequality & treat4 & $1.440$ & $0.169$ & $1.109$ & $1.772$ & $0$ & $4,011$ \\ 
+12 & General monopolies & treat1 & $0.044$ & $0.032$ & $$-$0.017$ & $0.106$ & $0.214$ & $3,991$ \\ 
+42 & General monopolies & treat4 & $0.220$ & $0.156$ & $$-$0.087$ & $0.526$ & $0.214$ & $3,991$ \\ 
+13 & General inequality & treat1 & $$-$0.036$ & $0.029$ & $$-$0.093$ & $0.021$ & $0.214$ & $3,992$ \\ 
+43 & General inequality & treat4 & $$-$0.179$ & $0.144$ & $$-$0.460$ & $0.103$ & $0.214$ & $3,992$ \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 

@@ -1,0 +1,17 @@
+
+% Table created by stargazer v.5.2.3 by Marek Hlavac, Social Policy Institute. E-mail: marek.hlavac at gmail.com
+% Date and time: 周五, 3月 27, 2026 - 14:03:27
+\begin{table}[!htbp] \centering 
+  \caption{Estimated Treatment Effects on Behavioral Outcomes} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} ccccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & outcome & term & estimate & std.error & conf.low & conf.high & p.value & n \\ 
+\hline \\[-1.8ex] 
+4 & Total post-sale activities (standardized) & treat1 & $$-$0.022$ & $0.031$ & $$-$0.083$ & $0.039$ & $0.482$ & $4,009$ \\ 
+11 & Filed FTC report & treat1 & $0.020$ & $0.009$ & $0.003$ & $0.037$ & $0.043$ & $4,015$ \\ 
+41 & Filed FTC report & treat4 & $0.098$ & $0.043$ & $0.015$ & $0.182$ & $0.043$ & $4,015$ \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table} 
