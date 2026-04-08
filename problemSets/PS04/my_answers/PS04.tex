@@ -1,0 +1,232 @@
+\documentclass[12pt,letterpaper]{article}
+
+\usepackage{graphicx,textcomp}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{fullpage}
+\usepackage[reqno]{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb,enumerate}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage[compact]{titlesec}
+\usepackage{dcolumn}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{array}
+
+\newtheorem{com}{Comment}
+\newtheorem{lem}{Lemma}
+\newtheorem{prop}{Proposition}
+\newtheorem{thm}{Theorem}
+\newtheorem{defn}{Definition}
+\newtheorem{cor}{Corollary}
+\newtheorem{obs}{Observation}
+\newtheorem{hyp}{Hypothesis}
+
+\newcolumntype{.}{D{.}{.}{-1}}
+\newcolumntype{d}[1]{D{.}{.}{#1}}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\ttfamily\footnotesize,
+	breakatwhitespace=false,
+	breaklines=true,
+	captionpos=b,
+	keepspaces=true,
+	numbers=left,
+	numbersep=5pt,
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	tabsize=2
+}
+\lstset{style=mystyle}
+
+\title{\textbf{Problem Set 4} \\ \large Applied Stats II}
+\author{Qi Liu 25340516}
+\date{April 5, 2026}
+
+\begin{document}
+	\maketitle
+	\onehalfspacing
+	
+	\section*{Question 1: Cox Proportional Hazards Model}
+	
+	\subsection*{1. Brief setup}
+	
+	This question studies historical child mortality using the \texttt{child} dataset from the \texttt{eha} package. Because the outcome is a time-to-event process, a Cox proportional hazards model is appropriate. The goal is to examine whether mother's age and infant gender are associated with the hazard of child death over the observation period.
+	
+	\subsection*{2. Model specification}
+	
+	\textbf{Dependent variable:} child mortality, modeled as a survival outcome using \texttt{Surv(enter, exit, event)}, where \texttt{event = 1} indicates that the child died during the observation period.
+	
+	\textbf{Independent variables:}
+	\begin{itemize}
+		\item \texttt{m.age}: mother's age
+		\item \texttt{sex}: infant gender
+	\end{itemize}
+	
+	\textbf{Model form:}
+	\[
+	h(t \mid X) = h_0(t)\exp(\beta_1 \texttt{m.age} + \beta_2 \texttt{sex})
+	\]
+	
+	\subsection*{3. R code}
+	
+	\begin{lstlisting}[language=R]
+		data("child", package = "eha")
+		
+		library(survival)
+		
+		model_q1 <- coxph(Surv(enter, exit, event) ~ m.age + sex, data = child)
+		summary(model_q1)
+		
+		exp(coef(model_q1))
+		exp(confint(model_q1))
+		
+		cox.zph(model_q1)
+	\end{lstlisting}
+	
+	\subsection*{4. Output}
+	
+	The estimated Cox proportional hazards model is based on 26,574 observations and 5,616 events. The key results are reported below.
+	
+	\begin{table}[H]
+		\centering
+		\caption{Cox Proportional Hazards Model for Child Mortality}
+		\begin{tabular}{lcccc}
+			\toprule
+			Variable & Coefficient & Hazard Ratio & p-value & 95\% CI for HR \\
+			\midrule
+			\texttt{m.age}      & 0.0076  & 1.0076 & 0.0003 & [1.0030,\ 1.0119] \\
+			\texttt{sexfemale}  & -0.0822 & 0.9211 & 0.0021 & [0.8740,\ 0.9706] \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	The proportional hazards test using \texttt{cox.zph()} shows that:
+	\begin{itemize}
+		\item \texttt{m.age}: $p = 0.683$
+		\item \texttt{sex}: $p < 0.001$
+		\item Global test: $p = 0.0017$
+	\end{itemize}
+	
+	\subsection*{5. Interpretation}
+	
+	The coefficient on mother's age is positive and statistically significant. The hazard ratio for \texttt{m.age} is 1.0076, which means that, holding infant gender constant, a one-year increase in mother's age is associated with about a 0.8\% increase in the hazard of child death. This effect is substantively small, but it is estimated precisely and is statistically significant.
+	
+	The coefficient on \texttt{sexfemale} is negative and statistically significant. The hazard ratio is 0.9211, which indicates that female infants have a lower hazard of death than male infants. Substantively, this corresponds to about a 7.9\% lower mortality hazard for girls relative to boys, controlling for mother's age.
+	
+	Overall, the model suggests that both mother's age and infant gender are associated with child mortality risk in this historical sample. However, the proportional hazards assumption is not fully satisfied. The \texttt{cox.zph()} results indicate that mother's age does not appear to violate the assumption, but infant gender does, and the global test is also statistically significant. This means the estimated gender effect should be interpreted with some caution, since the effect of gender may not be constant over the full observation period. A possible extension would be to model infant gender as a time-varying effect, since the proportional hazards assumption appears to be violated for this covariate.
+	
+	\newpage
+	
+	\section*{Question 2: Heckman Selection Model}
+	
+	\subsection*{1. Brief setup}
+	
+	This question examines disaster relief in two stages: first, whether relief is provided at all, and second, how much relief is provided conditional on a contribution occurring. A Heckman selection model is appropriate because the amount of aid is only meaningfully observed for the subset of disaster cases that actually receive contributions. If this selection process is ignored, estimates of the amount equation may be biased.
+	
+	\subsection*{2. Model specification}
+	
+	\textbf{Selection equation dependent variable:} \texttt{binContribution}
+	
+	\textbf{Outcome equation dependent variable:} \texttt{originalContributionMillionUSDLogged}
+	
+	\textbf{Independent variables in both equations:}
+	\begin{itemize}
+		\item \texttt{occurrences}
+		\item \texttt{deathsEM}
+		\item \texttt{normalizedDamageEMLogged}
+	\end{itemize}
+	
+	\textbf{Model form:}
+	
+	Selection equation:
+	\[
+	S_i^* = \gamma_0 + \gamma_1 \texttt{occurrences}_i + \gamma_2 \texttt{deathsEM}_i + \gamma_3 \texttt{normalizedDamageEMLogged}_i + u_i
+	\]
+	
+	where:
+	\[
+	S_i =
+	\begin{cases}
+		1 & \text{if a contribution occurs} \\
+		0 & \text{otherwise}
+	\end{cases}
+	\]
+	
+	Outcome equation:
+	\[
+	Y_i = \beta_0 + \beta_1 \texttt{occurrences}_i + \beta_2 \texttt{deathsEM}_i + \beta_3 \texttt{normalizedDamageEMLogged}_i + \epsilon_i
+	\]
+	
+	where \(Y_i\) is the logged contribution amount, observed only when a contribution occurs.
+	
+	\subsection*{3. R code}
+	
+	\begin{lstlisting}[language=R]
+		disaster_data <- read.csv("https://raw.githubusercontent.com/ASDS-TCD/StatsII_2026/refs/heads/main/datasets/disaster_response.csv")
+		
+		library(sampleSelection)
+		
+		model_q2 <- selection(
+		selection = binContribution ~ occurrences + deathsEM + normalizedDamageEMLogged,
+		outcome   = originalContributionMillionUSDLogged ~ occurrences + deathsEM + normalizedDamageEMLogged,
+		data = disaster_data,
+		method = "ml"
+		)
+		
+		summary(model_q2)
+	\end{lstlisting}
+	
+	\subsection*{4. Output}
+	
+	The model is estimated on 49,096 observations, of which 3,248 are observed in the outcome equation and 45,848 are censored. The key coefficients are reported below.
+	
+	\begin{table}[H]
+		\centering
+		\caption{Heckman Selection Model Results}
+		\begin{tabular}{lccc}
+			\toprule
+			Variable & Estimate & p-value & Interpretation of sign \\
+			\midrule
+			\multicolumn{4}{l}{\textit{Selection equation: } \texttt{binContribution}} \\
+			\texttt{occurrences} & 0.0193  & $< 0.001$ & Positive \\
+			\texttt{deathsEM} & 0.0119 & $< 0.001$ & Positive \\
+			\texttt{normalizedDamageEMLogged} & 0.0210 & $< 0.001$ & Positive \\
+			\midrule
+			\multicolumn{4}{l}{\textit{Outcome equation: } \texttt{originalContributionMillionUSDLogged}} \\
+			\texttt{occurrences} & -0.0018 & 0.771 & Not significant \\
+			\texttt{deathsEM} & 0.0058 & 0.004 & Positive \\
+			\texttt{normalizedDamageEMLogged} & -0.0181 & $< 0.001$ & Negative \\
+			\midrule
+			\texttt{rho} & -0.5267 & $< 0.001$ & Selection correlation \\
+			\bottomrule
+		\end{tabular}
+	\end{table}
+	
+	\subsection*{5. Interpretation}
+	
+	The selection equation shows that all three predictors are positive and highly statistically significant. This means that disasters with more occurrences, higher death counts, and greater logged damage are all more likely to receive relief. Taken together, these results suggest that more severe disasters are systematically more likely to receive aid.
+	
+	The outcome equation gives a more differentiated picture. The coefficient on \texttt{occurrences} is not statistically significant, which suggests that the number of disaster occurrences is not clearly related to the amount of relief once aid is provided. By contrast, \texttt{deathsEM} is positive and statistically significant, indicating that disasters with higher death counts receive larger logged contribution amounts, conditional on receiving aid. The coefficient on \texttt{normalizedDamageEMLogged} is negative and statistically significant. This implies that, holding the other severity measures constant, higher logged damage is associated with lower logged contribution amounts among cases that receive aid.
+	
+	Finally, the estimate of \texttt{rho} is negative and highly statistically significant. This indicates that the unobserved factors affecting whether aid is provided are correlated with the unobserved factors affecting how much aid is provided. In substantive terms, this is evidence of sample selection bias. Therefore, the Heckman selection model is preferable to a simple regression estimated only on the observed contribution amounts.
+	
+	Overall, the results support a two-stage interpretation of disaster relief. First, more severe disasters are more likely to receive aid at all. Second, conditional on aid being provided, deaths are associated with larger contribution amounts, while disaster occurrences have no clear effect and logged damage is negatively associated with the amount once the other covariates are held constant. Although Heckman models are often strengthened by an exclusion restriction, the assignment specifies the same predictors for both equations, so I retain that specification here.
+	
+\end{document}
